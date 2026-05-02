@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Описание учебного проекта ServiceBox: frontend на HTML/CSS/JS, backend на FastAPI и база SQLite." />
+    <title>ServiceBox — о проекте</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="top-strip" aria-label="Краткая информация о сервисе">
+        <span>Ежедневно 10:00–21:00</span>
+        <span>Диагностика перед ремонтом</span>
+        <a href="tel:+79000000000">+7 900 000-00-00</a>
+      </div>
+      <div class="site-header__inner">
+        <a class="brand" href="index.html" aria-label="ServiceBox — главная страница">
+          <span class="brand__logo" aria-hidden="true">SB</span>
+          <span class="brand__text">ServiceBox</span>
+        </a>
+        <nav class="nav" aria-label="Основная навигация">
+          <a href="index.html">Главная</a>
+          <a href="services.html">Цены</a>
+          <a href="client.html">Клиент</a>
+          <a href="master.html" data-master-link>Мастер</a>
+          <a href="about.html">О проекте</a>
+        </nav>
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero hero--compact">
+        <p class="eyebrow">О проекте</p>
+        <h1>Сервисный центр с frontend, FastAPI backend и SQLite</h1>
+        <p class="lead">
+          Проект не копирует чужой бренд: он повторяет типовую структуру сервиса ремонта,
+          но заявки, профили и переписка теперь сохраняются через backend и SQLite.
+        </p>
+      </section>
+
+      <section class="section split-section">
+        <article class="card">
+          <h2>Что реализовано</h2>
+          <ul class="check-list">
+            <li>Связанные HTML-страницы с общей шапкой, навигацией и футером.</li>
+            <li>Семантические теги: <code>header</code>, <code>nav</code>, <code>main</code>, <code>article</code>, <code>footer</code>.</li>
+            <li>Адаптивные сетки на CSS Grid/Flexbox и медиазапросы по ширине.</li>
+            <li>Отдельные правила для портретной и альбомной ориентации экрана.</li>
+            <li>Светлая и тёмная тема с сохранением выбора в <code>localStorage</code>.</li>
+            <li>Профиль клиента и профиль мастера: заявки, очередь, принятие в работу и сообщения через <code>FastAPI</code> + <code>SQLite</code>.</li>
+            <li>Мини-калькулятор стоимости ремонта на чистом JavaScript.</li>
+            <li>Статусы заявки: <code>open</code>, <code>in_progress</code>, <code>done</code>.</li>
+            <li>Защита от SQL-инъекций через параметризованные запросы SQLite.</li>
+          </ul>
+        </article>
+
+        <article class="card accent-card">
+          <h2>Стек</h2>
+          <div class="tag-list" aria-label="Используемые технологии">
+            <span>HTML5</span>
+            <span>CSS3</span>
+            <span>Vanilla JavaScript</span>
+            <span>FastAPI</span>
+            <span>SQLite</span>
+            <span>Docker</span>
+          </div>
+          <p>
+            Проект запускается как единое FastAPI-приложение: backend отдаёт API и статические HTML/CSS/JS-файлы.
+          </p>
+        </article>
+      </section>
+
+
+    </main>
+
+    <footer class="site-footer">
+      <span>ServiceBox · учебный проект</span>
+      <span>HTML5 · CSS3 · Vanilla JavaScript · FastAPI · SQLite</span>
+    </footer>
+    <script src="js/app.js" defer></script>
+  </body>
+</html>

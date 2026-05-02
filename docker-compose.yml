@@ -1,0 +1,17 @@
+services:
+  web-pract:
+    build:
+      context: .
+      network: host
+    container_name: web-pract-servicebox
+    ports:
+      - "8080:8000"
+    environment:
+      DATABASE_PATH: /app/data/servicebox.sqlite
+      MASTER_ACCESS_CODE: "1234"
+    volumes:
+      - servicebox-data:/app/data
+    network_mode: bridge
+
+volumes:
+  servicebox-data:
