@@ -18,7 +18,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 DATA_DIR = ROOT_DIR / "data"
 DATABASE_PATH = Path(os.getenv("DATABASE_PATH", DATA_DIR / "servicebox.sqlite"))
-MASTER_ACCESS_CODE = os.getenv("MASTER_ACCESS_CODE", "1234")
+PHONE_PATTERN = re.compile(
+    r"^\+7[\s\-]?\(?[0-9]{3}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$"
+)
 
 REPAIR_OPTIONS: dict[str, dict[str, Any]] = {
     "diagnostic": {"title": "Диагностика устройства", "price_from": 0, "duration": "15–60 минут"},
@@ -37,8 +39,19 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def clean_phone(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip())
+
+
+def is_valid_phone(value: str) -> bool:
+    return bool(PHONE_PATTERN.fullmatch(clean_phone(value)))
+
+
 def normalize_phone(value: str) -> str:
-    return re.sub(r"\D+", "", value or "")
+    cleaned = clean_phone(value)
+    if not is_valid_phone(cleaned):
+        return ""
+    return re.sub(r"\D+", "", cleaned)
 
 
 def slugify(value: str) -> str:

@@ -40,8 +40,20 @@
     if (type === "error") element.classList.add("is-error");
   }
 
+  var PHONE_PATTERN = /^\+7[\s-]?\(?[0-9]{3}\)?[\s-]?[0-9]{3}[\s-]?[0-9]{2}[\s-]?[0-9]{2}$/;
+
+  function cleanPhone(value) {
+    return String(value || "").trim().replace(/\s+/g, " ");
+  }
+
+  function isValidPhone(value) {
+    return PHONE_PATTERN.test(cleanPhone(value));
+  }
+
   function normalizePhone(value) {
-    return String(value || "").replace(/\D/g, "");
+    var cleaned = cleanPhone(value);
+    if (!isValidPhone(cleaned)) return "";
+    return cleaned.replace(/\D/g, "");
   }
 
   function pad2(value) {
@@ -472,7 +484,7 @@
   function validateClientRequest(data) {
     if (!data.clientName) return "Введите имя клиента.";
     if (!data.phone) return "Введите телефон для связи.";
-    if (!normalizePhone(data.phone)) return "Введите корректный телефон для привязки профиля.";
+    if (!isValidPhone(phone)) return setStatus(elements.profileStatus, "Введите телефон в формате +7 900 000-00-00.", "error");
     if (!data.device) return "Введите устройство.";
     if (!data.repairId) return "Выберите тип ремонта.";
     if (isPastPreferredTime(data.preferredTime)) return "Выберите дату и время не раньше текущего момента.";
