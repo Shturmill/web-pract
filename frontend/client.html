@@ -1,167 +1,77 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Профиль клиента ServiceBox: регистрация-заглушка, отправка заявки, просмотр статуса и переписка с мастером." />
-    <title>ServiceBox — профиль клиента</title>
-    <link rel="stylesheet" href="css/styles.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="top-strip" aria-label="Краткая информация о сервисе">
-        <span>Ежедневно 10:00–21:00</span>
-        <span>Диагностика перед ремонтом</span>
-        <a href="tel:+79000000000">+7 900 000-00-00</a>
-      </div>
-      <div class="site-header__inner">
-        <a class="brand" href="index.html" aria-label="ServiceBox — главная страница">
-          <span class="brand__logo" aria-hidden="true">SB</span>
-          <span class="brand__text">ServiceBox</span>
-        </a>
-        <nav class="nav" aria-label="Основная навигация">
-          <a href="index.html">Главная</a>
-          <a href="services.html">Цены</a>
-          <a href="client.html">Клиент</a>
-          <a href="master.html" data-master-link>Мастер</a>
-          <a href="about.html">О проекте</a>
-        </nav>
-        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
-      </div>
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Профиль клиента ServiceBox: создание заявки, просмотр статуса и переписка с мастером." />
+  <title>ServiceBox — клиент</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html"><span class="brand__logo">SB</span><span>ServiceBox</span></a>
+      <nav class="nav" aria-label="Основная навигация">
+        <a href="index.html">Главная</a>
+        <a href="services.html">Калькулятор</a>
+        <a href="client.html">Клиент</a>
+        <a href="master.html" data-master-link>Мастер</a>
+        <a href="about.html">О проекте</a>
+      </nav>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">◐</button>
+    </div>
+  </header>
 
-    <main>
-      <section class="hero hero--compact">
-        <p class="eyebrow">Профиль клиента</p>
-        <h1>Отправьте заявку и продолжайте переписку с мастером</h1>
-        <p class="lead">
-          Сначала сохраните простой профиль по телефону. После этого клиент видит только свои обращения,
-          может отправить заявку и ответить на сообщение мастера.
-        </p>
-      </section>
+  <main>
+    <section class="hero hero--compact">
+      <p class="eyebrow">Клиент</p>
+      <h1>Профиль клиента и заявка на ремонт</h1>
+      <p class="lead">Сохраните профиль по телефону, создайте заявку и отвечайте мастеру в карточке обращения.</p>
+    </section>
 
-      <section class="section" aria-labelledby="client-profile-title">
-        <article class="card auth-card">
-          <div class="profile-head">
-            <div class="avatar" aria-hidden="true">К</div>
-            <div>
-              <p class="eyebrow">Регистрация-заглушка</p>
-              <h2 id="client-profile-title">Профиль клиента</h2>
-            </div>
-          </div>
+    <section class="section grid grid--two">
+      <article class="card">
+        <h2>Профиль</h2>
+        <form id="client-profile-form" class="form-stack" novalidate>
+          <label for="profile-client-name">Имя</label>
+          <input id="profile-client-name" type="text" minlength="2" maxlength="80" pattern="[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё\s\-]{1,79}" title="Имя: только буквы, пробел или дефис" required />
+          <label for="profile-client-phone">Телефон</label>
+          <input id="profile-client-phone" type="tel" inputmode="tel" maxlength="30" placeholder="+7 900 000-00-00" pattern="\+7[\s\-]?\(?[0-9]{3}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}" title="Введите телефон в формате +7 900 000-00-00" required />
+          <button type="submit">Сохранить профиль</button>
+        </form>
+        <p class="profile-summary"><span class="profile-chip">Текущий клиент</span> <strong id="client-profile-current">Профиль не выбран</strong></p>
+        <button type="button" class="button button--ghost" id="client-profile-reset">Сменить профиль</button>
+        <p class="draft-status" id="client-profile-status" aria-live="polite"></p>
+      </article>
 
-          <form id="client-profile-form" class="inline-profile-form" novalidate>
-            <label for="profile-client-name">Имя</label>
-            <input id="profile-client-name" name="profile-client-name" type="text" autocomplete="name" maxlength="80" placeholder="Например: Иван" required />
+      <article class="card">
+        <h2>Новая заявка</h2>
+        <form id="client-request-form" class="form-stack" novalidate>
+          <label for="client-name">Имя клиента</label>
+          <input id="client-name" type="text" minlength="2" maxlength="80" pattern="[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё\s\-]{1,79}" title="Имя: только буквы, пробел или дефис" required />
+          <label for="client-phone">Телефон</label>
+          <input id="client-phone" type="tel" inputmode="tel" maxlength="30" placeholder="+7 900 000-00-00" pattern="\+7[\s\-]?\(?[0-9]{3}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}" title="Введите телефон в формате +7 900 000-00-00" required />
+          <label for="client-device">Устройство</label>
+          <input id="client-device" type="text" minlength="2" maxlength="120" pattern="[A-Za-zА-Яа-яЁё0-9][A-Za-zА-Яа-яЁё0-9\s\-+./()]{1,119}" title="Устройство: буквы, цифры и символы - + . / ( )" required />
+          <label for="client-repair-type">Услуга</label>
+          <select id="client-repair-type" required><option value="">Выберите услугу</option></select>
+          <label for="client-time">Дата и время</label>
+          <input id="client-time" type="datetime-local" required />
+          <label for="client-comment">Комментарий</label>
+          <textarea id="client-comment" maxlength="2000" placeholder="Опишите проблему без HTML-символов &lt; &gt; { } \"></textarea>
+          <div class="actions"><button type="submit">Отправить заявку</button><button type="button" class="button button--ghost" id="client-form-clear">Очистить</button></div>
+        </form>
+        <p class="draft-status" id="client-status" aria-live="polite"></p>
+      </article>
+    </section>
 
-            <label for="profile-client-phone">Телефон профиля</label>
-            <input id="profile-client-phone" name="profile-client-phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+7 900 000-00-00" required />
+    <section class="section">
+      <div class="section-head"><div><p class="eyebrow">Мои обращения</p><h2>Заявки клиента</h2></div><button class="button button--ghost" type="button" id="client-refresh">Обновить</button></div>
+      <div class="request-board" id="client-request-list" aria-live="polite"></div>
+    </section>
+  </main>
 
-            <button type="submit">Сохранить профиль</button>
-          </form>
-
-          <div class="profile-summary" aria-live="polite">
-            <span class="profile-chip">Текущий клиент</span>
-            <strong id="client-profile-current">Профиль не выбран</strong>
-            <button type="button" class="button button--ghost" id="client-profile-reset">Сменить профиль</button>
-          </div>
-          <p class="draft-status" id="client-profile-status" aria-live="polite"></p>
-        </article>
-      </section>
-
-      <section class="section profile-layout" aria-labelledby="client-form-title">
-        <article class="card form-draft">
-          <div class="profile-head">
-            <div class="avatar" aria-hidden="true">З</div>
-            <div>
-              <p class="eyebrow">Заявка</p>
-              <h2 id="client-form-title">Новая заявка на ремонт</h2>
-            </div>
-          </div>
-
-          <form id="client-request-form" novalidate>
-            <label for="client-name">Имя клиента</label>
-            <input id="client-name" name="client" type="text" autocomplete="name" maxlength="80" placeholder="Например: Иван" required />
-
-            <label for="client-phone">Телефон для связи</label>
-            <input id="client-phone" name="phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+7 900 000-00-00" required />
-
-            <label for="client-device">Устройство</label>
-            <input id="client-device" name="device" type="text" autocomplete="off" maxlength="120" placeholder="iPhone 13, Samsung A52, ноутбук Asus" required />
-
-            <label for="client-repair-type">Что нужно отремонтировать</label>
-            <select id="client-repair-type" name="repair-type" required aria-describedby="client-estimate-hint">
-              <option value="">Выберите обращение</option>
-            </select>
-            <p class="field-hint" id="client-estimate-hint">В списке сразу показана ориентировочная стоимость формата «от … ₽».</p>
-
-            <label for="client-time">Удобные дата и время</label>
-            <input id="client-time" name="time" type="datetime-local" />
-
-            <label for="client-comment">Комментарий</label>
-            <textarea id="client-comment" name="comment" rows="5" maxlength="4000" placeholder="Опишите симптомы: падал ли телефон, заряжается ли, есть ли важные данные..."></textarea>
-
-            <div class="form-actions">
-              <button type="submit">Отправить заявку мастеру</button>
-              <button type="button" class="button button--ghost" id="client-form-clear">Очистить форму</button>
-            </div>
-            <p class="draft-status" id="client-status" aria-live="polite"></p>
-          </form>
-        </article>
-
-        <aside class="card preview-card" aria-labelledby="client-preview-title">
-          <p class="eyebrow">Предпросмотр</p>
-          <h2 id="client-preview-title">Как увидит мастер</h2>
-          <dl class="preview-list">
-            <div>
-              <dt>Клиент</dt>
-              <dd id="client-preview-name">—</dd>
-            </div>
-            <div>
-              <dt>Телефон</dt>
-              <dd id="client-preview-phone">—</dd>
-            </div>
-            <div>
-              <dt>Устройство</dt>
-              <dd id="client-preview-device">—</dd>
-            </div>
-            <div>
-              <dt>Запрос</dt>
-              <dd id="client-preview-repair">—</dd>
-            </div>
-            <div>
-              <dt>Стоимость</dt>
-              <dd id="client-preview-price">—</dd>
-            </div>
-            <div>
-              <dt>Дата и время</dt>
-              <dd id="client-preview-time">—</dd>
-            </div>
-            <div>
-              <dt>Комментарий</dt>
-              <dd id="client-preview-comment">—</dd>
-            </div>
-          </dl>
-          <p class="note">Поля рендерятся через <code>textContent</code>, поэтому HTML-теги из формы не выполняются.</p>
-        </aside>
-      </section>
-
-      <section class="section" aria-labelledby="client-requests-title">
-        <div class="section__head">
-          <div>
-            <p class="eyebrow">Мои обращения</p>
-            <h2 id="client-requests-title">Заявки клиента</h2>
-          </div>
-          <button type="button" class="button button--ghost" id="client-refresh">Обновить список</button>
-        </div>
-        <div class="request-board" id="client-request-list" aria-live="polite"></div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <span>ServiceBox · учебный проект</span>
-      <span>Профиль по телефону · заявки · переписка</span>
-    </footer>
-    <script src="js/app.js" defer></script>
-  </body>
+  <footer class="site-footer">ServiceBox · профиль клиента</footer>
+  <script src="js/app.js" defer></script>
+</body>
 </html>

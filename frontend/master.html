@@ -1,109 +1,59 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Профиль мастера ServiceBox: заглушка входа, просмотр заявок клиентов, принятие заявки и переписка." />
-    <title>ServiceBox — профиль мастера</title>
-    <link rel="stylesheet" href="css/styles.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="top-strip" aria-label="Краткая информация о сервисе">
-        <span>Ежедневно 10:00–21:00</span>
-        <span>Диагностика перед ремонтом</span>
-        <a href="tel:+79000000000">+7 900 000-00-00</a>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Профиль мастера ServiceBox: общая доска, мои заявки и переписка." />
+  <title>ServiceBox — мастер</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html"><span class="brand__logo">SB</span><span>ServiceBox</span></a>
+      <nav class="nav" aria-label="Основная навигация">
+        <a href="index.html">Главная</a>
+        <a href="services.html">Калькулятор</a>
+        <a href="client.html">Клиент</a>
+        <a href="master.html" data-master-link>Мастер</a>
+        <a href="about.html">О проекте</a>
+      </nav>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero hero--compact">
+      <p class="eyebrow">Мастер</p>
+      <h1>Рабочая доска мастера</h1>
+      <p class="lead">Свободные заявки отображаются отдельно от заявок, которые взял текущий мастер.</p>
+    </section>
+
+    <section class="section" id="master-auth-card">
+      <article class="card narrow-card">
+        <h2>Вход мастера</h2>
+        <form id="master-login-form" class="form-stack" novalidate>
+          <label for="master-login-name">Имя мастера</label>
+          <input id="master-login-name" type="text" minlength="2" maxlength="80" pattern="[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё\s\-]{1,79}" required />
+          <label for="master-login-code">Код доступа</label>
+          <input id="master-login-code" type="password" minlength="4" maxlength="20" pattern="[A-Za-z0-9_\-]{4,20}" required />
+          <button type="submit">Войти</button>
+        </form>
+        <p class="draft-status" id="master-login-status" aria-live="polite"></p>
+      </article>
+    </section>
+
+    <section class="section" id="master-workspace" hidden>
+      <div class="section-head"><div><p class="eyebrow">Профиль</p><h2 id="master-current-profile">Мастер</h2></div><button id="master-logout" type="button" class="button button--ghost">Выйти</button></div>
+      <p class="draft-status" id="master-status" aria-live="polite"></p>
+      <div class="grid grid--two">
+        <article class="card"><h2>Общая доска</h2><p class="field-hint">Только заявки со статусом <code>open</code>.</p><div class="request-board" id="master-open-list"></div></article>
+        <article class="card"><h2>Мои заявки</h2><p class="field-hint">Только <code>in_progress</code> и <code>assignee = текущий мастер</code>.</p><div class="request-board" id="master-my-list"></div></article>
       </div>
-      <div class="site-header__inner">
-        <a class="brand" href="index.html" aria-label="ServiceBox — главная страница">
-          <span class="brand__logo" aria-hidden="true">SB</span>
-          <span class="brand__text">ServiceBox</span>
-        </a>
-        <nav class="nav" aria-label="Основная навигация">
-          <a href="index.html">Главная</a>
-          <a href="services.html">Цены</a>
-          <a href="client.html">Клиент</a>
-          <a href="master.html" data-master-link>Мастер</a>
-          <a href="about.html">О проекте</a>
-        </nav>
-        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
-      </div>
-    </header>
+    </section>
+  </main>
 
-    <main>
-      <section class="hero hero--compact">
-        <p class="eyebrow">Профиль мастера</p>
-        <h1>Очередь заявок и переписка по ремонту</h1>
-        <p class="lead">
-          Мастер видит свободные заявки, берёт обращение в работу и ведёт переписку с клиентом прямо в карточке заявки.
-        </p>
-      </section>
-
-      <section class="section" id="master-auth-card" aria-labelledby="master-login-title">
-        <article class="card auth-card">
-          <div class="profile-head">
-            <div class="avatar avatar--master" aria-hidden="true">М</div>
-            <div>
-              <p class="eyebrow">Вход мастера</p>
-              <h2 id="master-login-title">Регистрация-заглушка</h2>
-            </div>
-          </div>
-          <form id="master-login-form" class="inline-profile-form" novalidate>
-            <label for="master-login-name">Имя мастера</label>
-            <input id="master-login-name" name="master-login-name" type="text" maxlength="80" value="Алексей" required />
-
-            <label for="master-login-code">Учебный код</label>
-            <input id="master-login-code" name="master-login-code" type="password" maxlength="12" placeholder="Введите код" required />
-
-            <button type="submit">Войти как мастер</button>
-          </form>
-          <p class="draft-status" id="master-login-status" aria-live="polite"></p>
-        </article>
-      </section>
-
-      <section class="section" id="master-workspace" aria-labelledby="master-title" hidden>
-        <div class="master-toolbar">
-          <div class="profile-head profile-head__main">
-            <div class="avatar avatar--master" aria-hidden="true">М</div>
-            <div>
-              <p class="eyebrow">Мастер</p>
-              <h2 id="master-title">Рабочая доска</h2>
-              <p class="note note--inline" id="master-current-profile">Мастер не выбран.</p>
-            </div>
-          </div>
-          <button type="button" class="button button--ghost" id="master-logout">Выйти</button>
-        </div>
-
-        <p class="draft-status" id="master-status" aria-live="polite"></p>
-
-        <div class="master-board-layout">
-          <article class="card">
-            <div class="section__head">
-              <div>
-                <p class="eyebrow">Общая доска</p>
-                <h2>Доступные заявки</h2>
-              </div>
-            </div>
-            <div class="request-board" id="master-open-list" aria-live="polite"></div>
-          </article>
-
-          <article class="card">
-            <div class="section__head">
-              <div>
-                <p class="eyebrow">Моя доска</p>
-                <h2>Мои заявки в работе</h2>
-              </div>
-            </div>
-            <div class="request-board" id="master-my-list" aria-live="polite"></div>
-          </article>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <span>ServiceBox · учебный проект</span>
-      <span>Очередь заявок · принятие · переписка</span>
-    </footer>
-    <script src="js/app.js" defer></script>
-  </body>
+  <footer class="site-footer">ServiceBox · профиль мастера</footer>
+  <script src="js/app.js" defer></script>
+</body>
 </html>

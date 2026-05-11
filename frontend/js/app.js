@@ -1,881 +1,126 @@
 (function () {
   "use strict";
 
-  var API_BASE = "/api";
+  var API = "/api";
   var THEME_KEY = "servicebox_theme";
-  var CLIENT_DRAFT_KEY = "servicebox_client_draft";
-  var CLIENT_PROFILE_STORAGE_KEY = "servicebox_client_profile_v2";
-  var MASTER_PROFILE_STORAGE_KEY = "servicebox_master_profile_v2";
-
-  var REPAIR_OPTIONS = [
-    { id: "diagnostic", title: "Диагностика устройства", priceFrom: 0, duration: "15–60 минут" },
-    { id: "display", title: "Замена дисплея / экрана", priceFrom: 2490, duration: "30–90 минут" },
-    { id: "battery", title: "Замена аккумулятора", priceFrom: 890, duration: "30–60 минут" },
-    { id: "connector", title: "Ремонт разъёма зарядки", priceFrom: 1190, duration: "от 60 минут" },
-    { id: "water", title: "Восстановление после влаги", priceFrom: 1990, duration: "от 90 минут" },
-    { id: "camera", title: "Замена камеры / стекла камеры", priceFrom: 1490, duration: "30–90 минут" },
-    { id: "speaker", title: "Динамик, микрофон или связь", priceFrom: 990, duration: "30–90 минут" },
-    { id: "software", title: "Настройка, прошивка или перенос данных", priceFrom: 790, duration: "30–120 минут" },
-    { id: "cleaning", title: "Чистка ноутбука / профилактика", priceFrom: 1490, duration: "45–90 минут" }
-  ];
-
-  var BASE_PRICES = {
-    phone: { display: 2490, battery: 890, connector: 1190, water: 1990, software: 790, cleaning: 990 },
-    tablet: { display: 3290, battery: 1290, connector: 1490, water: 2190, software: 890, cleaning: 1190 },
-    laptop: { display: 4290, battery: 1490, connector: 1890, water: 2490, software: 990, cleaning: 1490 }
-  };
-
-  var BRAND_MULTIPLIERS = { standard: 1, apple: 1.25 };
-
-  function safeSetText(element, text) {
-    if (!element) return;
-    element.textContent = text == null || text === "" ? "—" : String(text);
-  }
-
-  function setStatus(element, message, type) {
-    if (!element) return;
-    element.textContent = message || "";
-    element.classList.remove("is-ok", "is-error");
-    if (type === "ok") element.classList.add("is-ok");
-    if (type === "error") element.classList.add("is-error");
-  }
-
+  var CLIENT_PROFILE_KEY = "servicebox_client_profile_v3";
+  var MASTER_PROFILE_KEY = "servicebox_master_profile_v3";
+  var CLIENT_DRAFT_KEY = "servicebox_client_draft_v3";
+  var REPAIR_OPTIONS = [];
   var PHONE_PATTERN = /^\+7[\s-]?\(?[0-9]{3}\)?[\s-]?[0-9]{3}[\s-]?[0-9]{2}[\s-]?[0-9]{2}$/;
+  var NAME_PATTERN = /^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё\s-]{1,79}$/;
+  var DEVICE_PATTERN = /^[A-Za-zА-Яа-яЁё0-9][A-Za-zА-Яа-яЁё0-9\s\-+./()]{1,119}$/;
+  var SAFE_TEXT_PATTERN = /^[^<>\\{}]{0,2000}$/;
 
-  function cleanPhone(value) {
-    return String(value || "").trim().replace(/\s+/g, " ");
-  }
+  function $(id) { return document.getElementById(id); }
+  function text(el, value) { if (el) el.textContent = value == null || value === "" ? "—" : String(value); }
+  function status(el, message, type) { if (!el) return; el.textContent = message || ""; el.classList.remove("is-ok", "is-error"); if (type) el.classList.add(type === "ok" ? "is-ok" : "is-error"); }
+  function clean(value) { return String(value || "").trim().replace(/\s+/g, " "); }
+  function validPhone(value) { return PHONE_PATTERN.test(clean(value)); }
+  function normalizePhone(value) { return validPhone(value) ? clean(value).replace(/\D/g, "") : ""; }
+  function validName(value) { return NAME_PATTERN.test(clean(value)); }
+  function validDevice(value) { return DEVICE_PATTERN.test(clean(value)); }
+  function validText(value) { return SAFE_TEXT_PATTERN.test(clean(value || "")); }
+  function storageGet(key) { try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }
+  function storageSet(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {} }
+  function storageRemove(key) { try { localStorage.removeItem(key); } catch (_) {} }
+  function formatDate(value) { var d = value ? new Date(value) : null; if (!d || Number.isNaN(d.getTime())) return "—"; return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+  function formatDateOnly(value) { var d = value ? new Date(value + "T00:00:00") : null; if (!d || Number.isNaN(d.getTime())) return value || "—"; return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", weekday: "short" }); }
+  function pad2(v) { return String(v).padStart(2, "0"); }
+  function nowLocalValue() { var d = new Date(); d.setSeconds(0, 0); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+  function isPast(value) { if (!value) return false; var d = new Date(value); return !Number.isNaN(d.getTime()) && d < new Date(nowLocalValue()); }
+  function localToISO(value) { if (!value) return null; var d = new Date(value); return Number.isNaN(d.getTime()) ? value : d.toISOString(); }
+  function findOption(id) { return REPAIR_OPTIONS.find(function (x) { return x.id === id; }) || null; }
+  function repairTitle(id) { var x = findOption(id); return x ? x.title : "—"; }
+  function repairPrice(id) { var x = findOption(id); return x ? "от " + Number(x.priceFrom).toLocaleString("ru-RU") + " ₽" : "—"; }
 
-  function isValidPhone(value) {
-    return PHONE_PATTERN.test(cleanPhone(value));
-  }
-
-  function normalizePhone(value) {
-    var cleaned = cleanPhone(value);
-    if (!isValidPhone(cleaned)) return "";
-    return cleaned.replace(/\D/g, "");
-  }
-
-  function pad2(value) {
-    return String(value).padStart(2, "0");
-  }
-
-  function formatPrice(value) {
-    if (Number(value) === 0) return "от 0 ₽";
-    return "от " + Math.round(Number(value) || 0).toLocaleString("ru-RU") + " ₽";
-  }
-
-  function formatDate(value) {
-    var date = value ? new Date(value) : null;
-    if (!date || Number.isNaN(date.getTime())) return "—";
-    return date.toLocaleString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  }
-
-  function toDatetimeLocalValue(date) {
-    return [date.getFullYear(), pad2(date.getMonth() + 1), pad2(date.getDate())].join("-") +
-      "T" + [pad2(date.getHours()), pad2(date.getMinutes())].join(":");
-  }
-
-  function getNowRoundedToMinute() {
-    var now = new Date();
-    now.setSeconds(0, 0);
-    return now;
-  }
-
-  function setMinDateTime(input) {
-    if (!input) return;
-    input.min = toDatetimeLocalValue(getNowRoundedToMinute());
-  }
-
-  function isPastPreferredTime(value) {
-    if (!value) return false;
-    var selected = new Date(value);
-    if (Number.isNaN(selected.getTime())) return false;
-    return selected.getTime() < getNowRoundedToMinute().getTime();
-  }
-
-  function toServerDateTime(value) {
-    if (!value) return null;
-    var date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toISOString();
-  }
-
-  function findRepairOption(id) {
-    return REPAIR_OPTIONS.find(function (item) { return item.id === id; }) || null;
-  }
-
-  function getRepairLabel(id) {
-    var option = findRepairOption(id);
-    return option ? option.title : "—";
-  }
-
-  function getRepairPrice(id) {
-    var option = findRepairOption(id);
-    return option ? formatPrice(option.priceFrom) : "—";
-  }
-
-  function readStoredJson(storageKey) {
-    try {
-      var raw = localStorage.getItem(storageKey);
-      return raw ? JSON.parse(raw) : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function saveStoredJson(storageKey, data) {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(data));
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function removeStoredJson(storageKey) {
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (_) {}
-  }
-
-  async function apiFetch(path, options) {
-    var response = await fetch(API_BASE + path, Object.assign({
-      headers: { "Content-Type": "application/json" }
-    }, options || {}));
-
+  async function api(path, options) {
+    var response = await fetch(API + path, Object.assign({ headers: { "Content-Type": "application/json" } }, options || {}));
     var data = null;
-    try {
-      data = await response.json();
-    } catch (_) {}
-
+    try { data = await response.json(); } catch (_) {}
     if (!response.ok) {
-      var message = data && data.detail ? data.detail : "Ошибка сервера";
-      if (Array.isArray(message)) message = "Проверьте заполнение полей формы.";
-      throw new Error(message);
+      var detail = data && data.detail ? data.detail : "Ошибка сервера";
+      if (Array.isArray(detail)) detail = detail.map(function (x) { return x.msg || "Ошибка валидации"; }).join("; ");
+      throw new Error(detail);
     }
     return data;
   }
 
-  function saveClientProfile(profile) {
-    var normalized = Object.assign({}, profile, {
-      role: "client",
-      phoneNormalized: profile.phoneNormalized || normalizePhone(profile.phone)
-    });
-    saveStoredJson(CLIENT_PROFILE_STORAGE_KEY, normalized);
-    applyRoleVisibility();
-    return normalized;
+  function setTheme(theme) { document.documentElement.setAttribute("data-theme", theme); try { localStorage.setItem(THEME_KEY, theme); } catch (_) {} }
+  function initTheme() {
+    var saved = null; try { saved = localStorage.getItem(THEME_KEY); } catch (_) {}
+    setTheme(saved === "dark" || saved === "light" ? saved : "light");
+    var btn = $("theme-toggle");
+    if (!btn) return;
+    function label() { var dark = document.documentElement.getAttribute("data-theme") === "dark"; btn.textContent = dark ? "☀" : "☾"; }
+    label(); btn.addEventListener("click", function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); label(); });
   }
 
-  function getClientProfile() {
-    var profile = readStoredJson(CLIENT_PROFILE_STORAGE_KEY);
-    return profile && profile.role === "client" ? profile : null;
+  function currentNav() {
+    var cur = location.pathname.split("/").pop() || "index.html";
+    document.querySelectorAll(".nav a").forEach(function (a) { if (a.getAttribute("href") === cur) a.setAttribute("aria-current", "page"); });
+    document.querySelectorAll("[data-master-link]").forEach(function (a) { a.hidden = !storageGet(MASTER_PROFILE_KEY) && cur !== "master.html"; });
   }
 
-  function clearClientProfile() {
-    removeStoredJson(CLIENT_PROFILE_STORAGE_KEY);
-    applyRoleVisibility();
-  }
-
-  function saveMasterProfile(profile) {
-    var normalized = Object.assign({}, profile, { role: "master" });
-    saveStoredJson(MASTER_PROFILE_STORAGE_KEY, normalized);
-    applyRoleVisibility();
-    return normalized;
-  }
-
-  function getMasterProfile() {
-    var profile = readStoredJson(MASTER_PROFILE_STORAGE_KEY);
-    return profile && profile.role === "master" ? profile : null;
-  }
-
-  function clearMasterProfile() {
-    removeStoredJson(MASTER_PROFILE_STORAGE_KEY);
-    applyRoleVisibility();
-  }
-
-  function setTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
-  }
-
-  function loadTheme() {
-    var saved = null;
-    try { saved = localStorage.getItem(THEME_KEY); } catch (_) {}
-    if (saved === "dark" || saved === "light") {
-      setTheme(saved);
-      return;
-    }
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-    } else {
-      setTheme("light");
-    }
-  }
-
-  function wireThemeToggle() {
-    var button = document.getElementById("theme-toggle");
-    if (!button) return;
-
-    function updateButtonLabel() {
-      var theme = document.documentElement.getAttribute("data-theme") || "light";
-      var nextTheme = theme === "dark" ? "светлую" : "тёмную";
-      button.textContent = theme === "dark" ? "☀" : "☾";
-      button.setAttribute("aria-label", "Включить " + nextTheme + " тему");
-      button.setAttribute("title", "Включить " + nextTheme + " тему");
-    }
-
-    updateButtonLabel();
-    button.addEventListener("click", function () {
-      var isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      setTheme(isDark ? "light" : "dark");
-      updateButtonLabel();
+  async function loadOptions() {
+    try { REPAIR_OPTIONS = await api("/repair-options"); } catch (_) {}
+    document.querySelectorAll("select").forEach(function (select) {
+      if (!select.id || ["calc-service", "client-repair-type"].indexOf(select.id) === -1) return;
+      var value = select.value; select.replaceChildren();
+      var ph = document.createElement("option"); ph.value = ""; ph.textContent = select.id === "calc-service" ? "Выберите услугу" : "Выберите услугу"; select.appendChild(ph);
+      REPAIR_OPTIONS.forEach(function (opt) { var o = document.createElement("option"); o.value = opt.id; o.textContent = opt.title + " — от " + Number(opt.priceFrom).toLocaleString("ru-RU") + " ₽"; select.appendChild(o); });
+      if (value) select.value = value;
     });
   }
 
-  function applyRoleVisibility() {
-    var isMaster = Boolean(getMasterProfile());
-    var current = window.location.pathname.split("/").pop() || "index.html";
-    document.querySelectorAll("[data-master-link]").forEach(function (link) {
-      link.hidden = !isMaster && current !== "master.html";
-    });
-  }
+  function requestStatus(s) { return s === "open" ? "Свободна" : s === "in_progress" ? "В работе" : s === "done" ? "Готова" : s; }
+  function makeMeta(label, value) { var d = document.createElement("div"); d.className = "request-meta__item"; var l = document.createElement("span"); l.className = "request-meta__label"; l.textContent = label; var v = document.createElement("strong"); v.className = "request-meta__value"; v.textContent = value || "—"; d.append(l, v); return d; }
+  function messageAuthor(msg, context) { if (context === "client") return msg.from === "client" ? "Вы" : "Сервис"; return msg.from === "master" ? "Вы" : "Клиент: " + msg.author; }
+  function thread(req, context) { var msgs = Array.isArray(req.messages) ? req.messages : []; if (!msgs.length) return null; var box = document.createElement("div"); box.className = "message-thread"; var t = document.createElement("strong"); t.className = "message-thread__title"; t.textContent = "Переписка"; box.appendChild(t); msgs.forEach(function (m) { var item = document.createElement("div"); item.className = "thread-message thread-message--" + (m.from === "master" ? "master" : "client"); item.innerHTML = ""; var a = document.createElement("span"); a.className = "thread-message__author"; a.textContent = messageAuthor(m, context); var p = document.createElement("p"); p.textContent = m.text; var time = document.createElement("time"); time.className = "thread-message__time"; time.textContent = formatDate(m.createdAt); item.append(a, p, time); box.appendChild(item); }); return box; }
+  function replyBox(req, role) { var box = document.createElement("div"); box.className = "reply-box"; var ta = document.createElement("textarea"); ta.maxLength = 1000; ta.rows = 3; ta.placeholder = role === "master" ? "Сообщение клиенту..." : "Ответ мастеру..."; ta.dataset.replyText = role; var actions = document.createElement("div"); actions.className = "request-actions"; var send = document.createElement("button"); send.type = "button"; send.dataset.requestAction = role === "master" ? "master-reply" : "client-reply"; send.dataset.requestId = req.id; send.textContent = "Отправить"; actions.appendChild(send); if (role === "master") { var done = document.createElement("button"); done.type = "button"; done.className = "button button--ghost"; done.dataset.requestAction = "done"; done.dataset.requestId = req.id; done.textContent = "Готово"; actions.appendChild(done); } box.append(ta, actions); return box; }
+  function card(req, context) { var c = document.createElement("article"); c.className = "request-card"; c.dataset.requestId = req.id; var top = document.createElement("div"); top.className = "request-card__top"; var title = document.createElement("div"); var small = document.createElement("p"); small.className = "eyebrow"; small.textContent = "REQ-" + req.id; var h = document.createElement("h3"); h.textContent = req.device; title.append(small, h); var st = document.createElement("span"); st.className = "status-pill status-pill--" + req.status; st.textContent = requestStatus(req.status); top.append(title, st); c.appendChild(top); var meta = document.createElement("div"); meta.className = "request-meta"; meta.append(makeMeta("Клиент", req.clientName), makeMeta("Телефон", req.phone), makeMeta("Услуга", req.repairTitle), makeMeta("Цена", req.priceText), makeMeta("Дата", formatDate(req.preferredTime)), makeMeta("Создана", formatDate(req.createdAt))); if (context !== "client" && req.assigneeName) meta.appendChild(makeMeta("Мастер", req.assigneeName)); c.appendChild(meta); if (req.problem) { var prob = document.createElement("p"); prob.className = "request-comment"; prob.textContent = req.problem; c.appendChild(prob); } var th = thread(req, context === "client" ? "client" : "master"); if (th) c.appendChild(th); if (context === "client" && req.status === "in_progress") c.appendChild(replyBox(req, "client")); if (context === "master-open") { var a = document.createElement("div"); a.className = "request-actions"; var b = document.createElement("button"); b.type = "button"; b.dataset.requestAction = "accept"; b.dataset.requestId = req.id; b.textContent = "Взять в работу"; a.appendChild(b); c.appendChild(a); } if (context === "master-mine") c.appendChild(replyBox(req, "master")); return c; }
+  function empty(el, msg) { if (!el) return; el.replaceChildren(); var div = document.createElement("div"); div.className = "empty-state"; var b = document.createElement("strong"); b.textContent = "Пока пусто"; var p = document.createElement("p"); p.textContent = msg; div.append(b, p); el.appendChild(div); }
 
-  function setNavCurrent() {
-    var current = window.location.pathname.split("/").pop() || "index.html";
-    document.querySelectorAll(".nav a").forEach(function (link) {
-      if (link.getAttribute("href") === current) link.setAttribute("aria-current", "page");
-    });
-  }
-
-  function createElement(tagName, className, text) {
-    var element = document.createElement(tagName);
-    if (className) element.className = className;
-    if (text != null) element.textContent = String(text);
-    return element;
-  }
-
-  function createMeta(label, value) {
-    var item = createElement("div", "request-meta__item");
-    item.appendChild(createElement("span", "request-meta__label", label));
-    item.appendChild(createElement("strong", "request-meta__value", value || "—"));
-    return item;
-  }
-
-  function getStatusText(status) {
-    if (status === "open") return "Свободна";
-    if (status === "in_progress") return "В работе";
-    if (status === "done") return "Готова";
-    return "Свободна";
-  }
-
-  function getRequestMessages(request) {
-    return Array.isArray(request.messages) ? request.messages.filter(function (item) { return item && item.text; }) : [];
-  }
-
-  function getMessageAuthor(message, request, context) {
-    if (context === "client") return message.from === "client" ? "Вы" : "Сервисный центр";
-    if (message.from === "client") return "Клиент: " + (message.author || request.clientName || request.client || "Клиент");
-    return "Вы";
-  }
-
-  function createMessageThread(request, context) {
-    var messages = getRequestMessages(request);
-    if (!messages.length) return null;
-    var thread = createElement("div", "message-thread");
-    thread.appendChild(createElement("strong", "message-thread__title", "Переписка по заявке"));
-    messages.forEach(function (message) {
-      var item = createElement("div", "thread-message thread-message--" + (message.from === "client" ? "client" : "master"));
-      item.appendChild(createElement("span", "thread-message__author", getMessageAuthor(message, request, context)));
-      item.appendChild(createElement("p", "", message.text));
-      item.appendChild(createElement("time", "thread-message__time", formatDate(message.createdAt)));
-      thread.appendChild(item);
-    });
-    return thread;
-  }
-
-  function createReplyForm(request, mode) {
-    var isMaster = mode === "master";
-    var box = createElement("div", isMaster ? "reply-box master-reply-box" : "reply-box");
-    var idPrefix = isMaster ? "master-reply-" : "reply-";
-    var textarea = document.createElement("textarea");
-    var label = createElement("label", "visually-hidden", isMaster ? "Ответить клиенту" : "Ответить мастеру");
-    label.setAttribute("for", idPrefix + request.id);
-    textarea.id = idPrefix + request.id;
-    textarea.rows = 3;
-    textarea.maxLength = 1000;
-    textarea.placeholder = isMaster ? "Напишите сообщение клиенту..." : "Напишите ответ мастеру...";
-    textarea.dataset.replyText = mode;
-    box.appendChild(label);
-    box.appendChild(textarea);
-
-    var actions = createElement("div", "request-actions");
-    var send = createElement("button", "", isMaster ? "Отправить клиенту" : "Ответить мастеру");
-    send.type = "button";
-    send.dataset.requestAction = isMaster ? "master-reply" : "client-reply";
-    send.dataset.requestId = request.id;
-    actions.appendChild(send);
-
-    if (isMaster) {
-      var done = createElement("button", "button button--ghost", "Отметить готовой");
-      done.type = "button";
-      done.dataset.requestAction = "done";
-      done.dataset.requestId = request.id;
-      actions.appendChild(done);
-    }
-
-    box.appendChild(actions);
-    return box;
-  }
-
-  function createRequestCard(request, context) {
-    var card = createElement("article", "request-card");
-    card.dataset.requestId = request.id == null ? "" : String(request.id);
-
-    var top = createElement("div", "request-card__top");
-    var titleWrap = createElement("div");
-    titleWrap.appendChild(createElement("p", "eyebrow", request.id == null ? "Заявка" : "REQ-" + request.id));
-    titleWrap.appendChild(createElement("h3", "", request.device || "Устройство не указано"));
-    top.appendChild(titleWrap);
-    top.appendChild(createElement("span", "status-pill status-pill--" + (request.status || "open"), getStatusText(request.status)));
-    card.appendChild(top);
-
-    var meta = createElement("div", "request-meta");
-    meta.appendChild(createMeta("Клиент", request.clientName || request.client));
-    meta.appendChild(createMeta("Телефон", request.phone));
-    meta.appendChild(createMeta("Запрос", request.repairTitle || getRepairLabel(request.repairId)));
-    meta.appendChild(createMeta("Стоимость", request.priceText || getRepairPrice(request.repairId)));
-    meta.appendChild(createMeta("Время", formatDate(request.preferredTime)));
-    meta.appendChild(createMeta("Создана", formatDate(request.createdAt)));
-    if ((context === "master" || context === "master-mine") && request.status !== "open") {
-      meta.appendChild(createMeta("Исполнитель", request.assigneeName || "Мастер"));
-    }
-    card.appendChild(meta);
-
-    if (request.problem || request.comment) {
-      card.appendChild(createElement("p", "request-comment", request.problem || request.comment));
-    }
-
-    var thread = createMessageThread(request, context === "client" ? "client" : "master");
-    if (thread) card.appendChild(thread);
-
-    if (context === "client" && request.status === "in_progress") {
-      card.appendChild(createReplyForm(request, "client"));
-    }
-
-    if (context === "master-open") {
-      var actionsOpen = createElement("div", "request-actions");
-      var accept = createElement("button", "", "Взять в работу");
-      accept.type = "button";
-      accept.dataset.requestAction = "accept";
-      accept.dataset.requestId = request.id;
-      actionsOpen.appendChild(accept);
-      card.appendChild(actionsOpen);
-    }
-
-    if (context === "master-mine") {
-      card.appendChild(createReplyForm(request, "master"));
-    }
-
-    return card;
-  }
-
-  function renderEmpty(container, text) {
-    if (!container) return;
-    container.replaceChildren();
-    var empty = createElement("div", "empty-state");
-    empty.appendChild(createElement("strong", "", "Пока пусто"));
-    empty.appendChild(createElement("p", "", text));
-    container.appendChild(empty);
-  }
-
-  function populateRepairSelect(select) {
-    if (!select) return;
-    var current = select.value;
-    select.replaceChildren();
-    var placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Выберите обращение";
-    select.appendChild(placeholder);
-    REPAIR_OPTIONS.forEach(function (option) {
-      var item = document.createElement("option");
-      item.value = option.id;
-      item.textContent = option.title + " — " + formatPrice(option.priceFrom);
-      item.dataset.price = String(option.priceFrom);
-      select.appendChild(item);
-    });
-    if (current) select.value = current;
-  }
-
-  function getClientElements() {
-    return {
-      profileForm: document.getElementById("client-profile-form"),
-      profileName: document.getElementById("profile-client-name"),
-      profilePhone: document.getElementById("profile-client-phone"),
-      profileCurrent: document.getElementById("client-profile-current"),
-      profileReset: document.getElementById("client-profile-reset"),
-      profileStatus: document.getElementById("client-profile-status"),
-      form: document.getElementById("client-request-form"),
-      name: document.getElementById("client-name"),
-      phone: document.getElementById("client-phone"),
-      device: document.getElementById("client-device"),
-      repair: document.getElementById("client-repair-type"),
-      time: document.getElementById("client-time"),
-      comment: document.getElementById("client-comment"),
-      status: document.getElementById("client-status"),
-      clear: document.getElementById("client-form-clear"),
-      refresh: document.getElementById("client-refresh"),
-      previewName: document.getElementById("client-preview-name"),
-      previewPhone: document.getElementById("client-preview-phone"),
-      previewDevice: document.getElementById("client-preview-device"),
-      previewRepair: document.getElementById("client-preview-repair"),
-      previewPrice: document.getElementById("client-preview-price"),
-      previewTime: document.getElementById("client-preview-time"),
-      previewComment: document.getElementById("client-preview-comment")
-    };
-  }
-
-  function readClientForm(elements) {
-    return {
-      clientName: elements.name ? elements.name.value.trim() : "",
-      phone: elements.phone ? elements.phone.value.trim() : "",
-      device: elements.device ? elements.device.value.trim() : "",
-      repairId: elements.repair ? elements.repair.value : "",
-      preferredTime: elements.time ? elements.time.value.trim() : "",
-      comment: elements.comment ? elements.comment.value.trim() : ""
-    };
-  }
-
-  function writeClientForm(elements, data) {
-    if (!data || typeof data !== "object") return;
-    if (elements.name) elements.name.value = typeof data.clientName === "string" ? data.clientName : "";
-    if (elements.phone) elements.phone.value = typeof data.phone === "string" ? data.phone : "";
-    if (elements.device) elements.device.value = typeof data.device === "string" ? data.device : "";
-    if (elements.repair) elements.repair.value = typeof data.repairId === "string" ? data.repairId : "";
-    if (elements.time) elements.time.value = typeof data.preferredTime === "string" ? data.preferredTime : "";
-    if (elements.comment) elements.comment.value = typeof data.comment === "string" ? data.comment : "";
-  }
-
-  function renderClientPreview(elements) {
-    var data = readClientForm(elements);
-    safeSetText(elements.previewName, data.clientName);
-    safeSetText(elements.previewPhone, data.phone);
-    safeSetText(elements.previewDevice, data.device);
-    safeSetText(elements.previewRepair, getRepairLabel(data.repairId));
-    safeSetText(elements.previewPrice, getRepairPrice(data.repairId));
-    safeSetText(elements.previewTime, data.preferredTime ? formatDate(new Date(data.preferredTime)) : "—");
-    safeSetText(elements.previewComment, data.comment);
-  }
-
-  function saveClientDraft(elements) {
-    saveStoredJson(CLIENT_DRAFT_KEY, readClientForm(elements));
-  }
-
-  function loadClientDraft(elements) {
-    var draft = readStoredJson(CLIENT_DRAFT_KEY);
-    if (draft) writeClientForm(elements, draft);
-  }
-
-  function validateClientRequest(data) {
-    if (!data.clientName) return "Введите имя клиента.";
-    if (!data.phone) return "Введите телефон для связи.";
-    if (!isValidPhone(phone)) return setStatus(elements.profileStatus, "Введите телефон в формате +7 900 000-00-00.", "error");
-    if (!data.device) return "Введите устройство.";
-    if (!data.repairId) return "Выберите тип ремонта.";
-    if (isPastPreferredTime(data.preferredTime)) return "Выберите дату и время не раньше текущего момента.";
-    return "";
-  }
-
-  function renderClientProfile(elements) {
-    var profile = getClientProfile();
-    if (profile) {
-      if (elements.profileName) elements.profileName.value = profile.name || "";
-      if (elements.profilePhone) elements.profilePhone.value = profile.phone || "";
-      if (elements.name) elements.name.value = profile.name || "";
-      if (elements.phone) elements.phone.value = profile.phone || "";
-      safeSetText(elements.profileCurrent, (profile.name || "Клиент") + " · " + (profile.phone || "без телефона"));
-    } else {
-      safeSetText(elements.profileCurrent, "Профиль не выбран");
-    }
-  }
-
-  async function saveClientProfileFromFields(elements, name, phone) {
-    var profile = await apiFetch("/client/profile", {
-      method: "POST",
-      body: JSON.stringify({ name: name, phone: phone })
-    });
-    saveClientProfile(profile);
-    renderClientProfile(elements);
-    await renderClientRequests();
-    return profile;
-  }
-
-  async function renderClientRequests() {
-    var container = document.getElementById("client-request-list");
-    if (!container) return;
-    var profile = getClientProfile();
-    if (!profile || !profile.phoneNormalized) {
-      renderEmpty(container, "Сначала сохраните профиль клиента по телефону. После этого здесь появятся только ваши заявки.");
-      return;
-    }
-    try {
-      var requests = await apiFetch("/requests/client?phone=" + encodeURIComponent(profile.phone || profile.phoneNormalized));
-      if (!requests.length) {
-        renderEmpty(container, "Для этого телефона заявок пока нет. Отправьте первое обращение через форму выше.");
-        return;
-      }
-      container.replaceChildren();
-      requests.forEach(function (request) { container.appendChild(createRequestCard(request, "client")); });
-    } catch (error) {
-      renderEmpty(container, "Не удалось загрузить заявки: " + error.message);
-    }
-  }
-
-  async function wireClientReply() {
-    var container = document.getElementById("client-request-list");
-    var statusEl = document.getElementById("client-status");
-    if (!container) return;
-    container.addEventListener("click", async function (event) {
-      var target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (target.dataset.requestAction !== "client-reply") return;
-      var profile = getClientProfile();
-      if (!profile) {
-        setStatus(statusEl, "Сначала сохраните профиль клиента.", "error");
-        return;
-      }
-      var card = target.closest(".request-card");
-      var textarea = card ? card.querySelector('textarea[data-reply-text="client"]') : null;
-      var text = textarea ? textarea.value.trim() : "";
-      if (!text) {
-        setStatus(statusEl, "Введите ответ мастеру.", "error");
-        return;
-      }
+  async function initCalculator() {
+    var select = $("calc-service"); if (!select) return;
+    var cal = $("price-calendar"); var refresh = $("calendar-refresh"); var resultPrice = $("calc-result-price"); var resultService = $("calc-result-service"); var resultDate = $("calc-result-date"); var resultReason = $("calc-result-reason");
+    async function render() {
+      var serviceId = select.value;
+      cal.replaceChildren(); text(resultPrice, "—"); text(resultService, repairTitle(serviceId)); text(resultDate, "—"); text(resultReason, "—");
+      if (!serviceId) return empty(cal, "Выберите услугу, чтобы увидеть календарь цен.");
       try {
-        await apiFetch("/requests/" + encodeURIComponent(target.dataset.requestId) + "/messages", {
-          method: "POST",
-          body: JSON.stringify({
-            senderRole: "client",
-            author: profile.name || "Клиент",
-            phone: profile.phone || profile.phoneNormalized,
-            text: text
-          })
-        });
-        if (textarea) textarea.value = "";
-        await renderClientRequests();
-        setStatus(statusEl, "Ответ отправлен мастеру.", "ok");
-      } catch (error) {
-        setStatus(statusEl, error.message, "error");
-        await renderClientRequests();
-      }
-    });
+        var days = await api("/calculator/prices?serviceId=" + encodeURIComponent(serviceId) + "&days=21");
+        cal.replaceChildren();
+        days.forEach(function (d, i) { var btn = document.createElement("button"); btn.type = "button"; btn.className = "price-day"; btn.innerHTML = ""; var date = document.createElement("span"); date.className = "price-day__date"; date.textContent = formatDateOnly(d.date); var price = document.createElement("span"); price.className = "price-day__price"; price.textContent = d.priceText; var reason = document.createElement("span"); reason.className = "price-day__reason"; reason.textContent = d.reason; btn.append(date, price, reason); btn.addEventListener("click", function () { document.querySelectorAll(".price-day").forEach(function (x) { x.classList.remove("is-selected"); }); btn.classList.add("is-selected"); text(resultPrice, d.priceText); text(resultService, repairTitle(serviceId)); text(resultDate, formatDateOnly(d.date)); text(resultReason, d.reason); }); cal.appendChild(btn); if (i === 0) btn.click(); });
+      } catch (e) { empty(cal, e.message); }
+    }
+    select.addEventListener("change", render); if (refresh) refresh.addEventListener("click", render); render();
   }
 
-  function clearClientForm(elements) {
-    var profile = getClientProfile();
-    if (elements.form) elements.form.reset();
-    if (profile) {
-      if (elements.name) elements.name.value = profile.name || "";
-      if (elements.phone) elements.phone.value = profile.phone || "";
-    }
-    populateRepairSelect(elements.repair);
-    setMinDateTime(elements.time);
-    removeStoredJson(CLIENT_DRAFT_KEY);
-    renderClientPreview(elements);
+  function clientProfile() { return storageGet(CLIENT_PROFILE_KEY); }
+  function masterProfile() { return storageGet(MASTER_PROFILE_KEY); }
+  function setMinDate(el) { if (el) el.min = nowLocalValue(); }
+  function readClientForm() { return { clientName: clean($("client-name").value), phone: clean($("client-phone").value), device: clean($("client-device").value), repairId: $("client-repair-type").value, preferredTime: $("client-time").value, comment: clean($("client-comment").value) }; }
+  function validateClient(data) { if (!validName(data.clientName)) return "Имя: только буквы, пробел или дефис, 2–80 символов."; if (!validPhone(data.phone)) return "Телефон в формате +7 900 000-00-00."; if (!validDevice(data.device)) return "Проверьте название устройства."; if (!data.repairId) return "Выберите услугу."; if (!data.preferredTime || isPast(data.preferredTime)) return "Выберите дату и время не раньше текущего момента."; if (!validText(data.comment)) return "Комментарий не должен содержать < > { } или обратный слеш."; return ""; }
+  async function saveClientProfile(name, phone) { var p = await api("/client/profile", { method: "POST", body: JSON.stringify({ name: name, phone: phone }) }); storageSet(CLIENT_PROFILE_KEY, p); return p; }
+  function fillClientProfile() { var p = clientProfile(); text($("client-profile-current"), p ? p.name + " · " + p.phone : "Профиль не выбран"); if (p) { if ($("profile-client-name")) $("profile-client-name").value = p.name; if ($("profile-client-phone")) $("profile-client-phone").value = p.phone; if ($("client-name")) $("client-name").value = p.name; if ($("client-phone")) $("client-phone").value = p.phone; } }
+  async function renderClientRequests() { var list = $("client-request-list"); if (!list) return; var p = clientProfile(); if (!p) return empty(list, "Сначала сохраните профиль клиента."); try { var data = await api("/requests/client?phone=" + encodeURIComponent(p.phone)); if (!data.length) return empty(list, "Заявок пока нет."); list.replaceChildren(); data.forEach(function (r) { list.appendChild(card(r, "client")); }); } catch (e) { empty(list, e.message); } }
+  async function initClient() {
+    if (!$("client-profile-form")) return;
+    setMinDate($("client-time")); fillClientProfile(); renderClientRequests(); var draft = storageGet(CLIENT_DRAFT_KEY); if (draft) { Object.keys(draft).forEach(function (k) {}); }
+    $("client-profile-form").addEventListener("submit", async function (ev) { ev.preventDefault(); var name = clean($("profile-client-name").value); var phone = clean($("profile-client-phone").value); if (!validName(name)) return status($("client-profile-status"), "Некорректное имя.", "error"); if (!validPhone(phone)) return status($("client-profile-status"), "Телефон в формате +7 900 000-00-00.", "error"); try { await saveClientProfile(name, phone); fillClientProfile(); renderClientRequests(); status($("client-profile-status"), "Профиль сохранён.", "ok"); } catch (e) { status($("client-profile-status"), e.message, "error"); } });
+    $("client-profile-reset").addEventListener("click", function () { storageRemove(CLIENT_PROFILE_KEY); fillClientProfile(); renderClientRequests(); status($("client-profile-status"), "Профиль очищен.", "ok"); });
+    $("client-request-form").addEventListener("input", function () { storageSet(CLIENT_DRAFT_KEY, readClientForm()); });
+    $("client-request-form").addEventListener("change", function () { setMinDate($("client-time")); storageSet(CLIENT_DRAFT_KEY, readClientForm()); });
+    $("client-request-form").addEventListener("submit", async function (ev) { ev.preventDefault(); setMinDate($("client-time")); var data = readClientForm(); var error = validateClient(data); if (error) return status($("client-status"), error, "error"); try { var p = clientProfile(); if (!p || normalizePhone(p.phone) !== normalizePhone(data.phone)) { p = await saveClientProfile(data.clientName, data.phone); fillClientProfile(); } await api("/requests", { method: "POST", body: JSON.stringify(Object.assign({}, data, { preferredTime: localToISO(data.preferredTime) })) }); storageRemove(CLIENT_DRAFT_KEY); $("client-request-form").reset(); fillClientProfile(); setMinDate($("client-time")); renderClientRequests(); status($("client-status"), "Заявка отправлена.", "ok"); } catch (e) { status($("client-status"), e.message, "error"); } });
+    $("client-form-clear").addEventListener("click", function () { $("client-request-form").reset(); fillClientProfile(); setMinDate($("client-time")); storageRemove(CLIENT_DRAFT_KEY); status($("client-status"), "Форма очищена.", "ok"); });
+    $("client-refresh").addEventListener("click", renderClientRequests);
+    $("client-request-list").addEventListener("click", async function (ev) { var t = ev.target; if (!(t instanceof HTMLElement) || t.dataset.requestAction !== "client-reply") return; var box = t.closest(".request-card"); var ta = box ? box.querySelector('textarea[data-reply-text="client"]') : null; var msg = clean(ta ? ta.value : ""); var p = clientProfile(); if (!validText(msg) || !msg) return status($("client-status"), "Введите корректное сообщение без HTML-символов.", "error"); try { await api("/requests/" + t.dataset.requestId + "/messages", { method: "POST", body: JSON.stringify({ senderRole: "client", author: p.name, phone: p.phone, text: msg }) }); renderClientRequests(); status($("client-status"), "Сообщение отправлено.", "ok"); } catch (e) { status($("client-status"), e.message, "error"); } });
   }
 
-  async function wireClientProfile() {
-    var elements = getClientElements();
-    if (!elements.form && !elements.profileForm) return;
+  async function renderMaster() { var open = $("master-open-list"); var mine = $("master-my-list"); if (!open || !mine) return; var p = masterProfile(); if (!p) return; try { var openData = await api("/requests/open"); var mineData = await api("/requests/master?masterId=" + encodeURIComponent(p.id)); open.replaceChildren(); mine.replaceChildren(); if (!openData.length) empty(open, "Свободных заявок нет."); else openData.forEach(function (r) { open.appendChild(card(r, "master-open")); }); if (!mineData.length) empty(mine, "У вас пока нет заявок в работе."); else mineData.forEach(function (r) { mine.appendChild(card(r, "master-mine")); }); } catch (e) { empty(open, e.message); empty(mine, e.message); } }
+  async function initMaster() { if (!$("master-login-form")) return; var auth = $("master-auth-card"); var work = $("master-workspace"); async function refresh() { var p = masterProfile(); auth.hidden = !!p; work.hidden = !p; if (p) { text($("master-current-profile"), "Мастер: " + p.name); await renderMaster(); } } await refresh(); $("master-login-form").addEventListener("submit", async function (ev) { ev.preventDefault(); var name = clean($("master-login-name").value); var code = clean($("master-login-code").value); if (!validName(name)) return status($("master-login-status"), "Некорректное имя мастера.", "error"); if (!/^[A-Za-z0-9_-]{4,20}$/.test(code)) return status($("master-login-status"), "Некорректный код.", "error"); try { var p = await api("/master/login", { method: "POST", body: JSON.stringify({ name: name, code: code }) }); storageSet(MASTER_PROFILE_KEY, p); currentNav(); status($("master-login-status"), "", "ok"); await refresh(); } catch (e) { status($("master-login-status"), e.message, "error"); } }); $("master-logout").addEventListener("click", async function () { storageRemove(MASTER_PROFILE_KEY); currentNav(); await refresh(); }); $("master-workspace").addEventListener("click", async function (ev) { var t = ev.target; if (!(t instanceof HTMLElement) || !t.dataset.requestAction) return; var p = masterProfile(); try { if (t.dataset.requestAction === "accept") { await api("/requests/" + t.dataset.requestId + "/accept", { method: "POST", body: JSON.stringify({ masterId: p.id, masterName: p.name }) }); status($("master-status"), "Заявка взята в работу.", "ok"); } if (t.dataset.requestAction === "master-reply") { var box = t.closest(".request-card"); var ta = box ? box.querySelector('textarea[data-reply-text="master"]') : null; var msg = clean(ta ? ta.value : ""); if (!msg || !validText(msg)) throw new Error("Введите корректное сообщение без HTML-символов."); await api("/requests/" + t.dataset.requestId + "/messages", { method: "POST", body: JSON.stringify({ senderRole: "master", author: p.name, masterId: p.id, text: msg }) }); status($("master-status"), "Сообщение отправлено.", "ok"); }
+        if (t.dataset.requestAction === "done") { await api("/requests/" + t.dataset.requestId + "/done", { method: "POST", body: JSON.stringify({ masterId: p.id }) }); status($("master-status"), "Заявка завершена.", "ok"); } await renderMaster(); } catch (e) { status($("master-status"), e.message, "error"); await renderMaster(); } }); }
 
-    populateRepairSelect(elements.repair);
-    setMinDateTime(elements.time);
-    loadClientDraft(elements);
-    renderClientProfile(elements);
-    renderClientPreview(elements);
-    await renderClientRequests();
-    wireClientReply();
-
-    if (elements.profileForm) {
-      elements.profileForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        var name = elements.profileName ? elements.profileName.value.trim() : "";
-        var phone = elements.profilePhone ? elements.profilePhone.value.trim() : "";
-        if (!name) return setStatus(elements.profileStatus, "Введите имя клиента.", "error");
-        if (!normalizePhone(phone)) return setStatus(elements.profileStatus, "Введите телефон клиента.", "error");
-        try {
-          await saveClientProfileFromFields(elements, name, phone);
-          renderClientPreview(elements);
-          setStatus(elements.profileStatus, "Профиль клиента сохранён в браузере и в SQLite.", "ok");
-        } catch (error) {
-          setStatus(elements.profileStatus, error.message, "error");
-        }
-      });
-    }
-
-    if (elements.profileReset) {
-      elements.profileReset.addEventListener("click", async function () {
-        clearClientProfile();
-        if (elements.profileName) elements.profileName.value = "";
-        if (elements.profilePhone) elements.profilePhone.value = "";
-        renderClientProfile(elements);
-        await renderClientRequests();
-        setStatus(elements.profileStatus, "Профиль клиента очищен в браузере. Можно войти под другим телефоном.", "ok");
-      });
-    }
-
-    if (elements.form) {
-      elements.form.addEventListener("input", function () {
-        renderClientPreview(elements);
-        saveClientDraft(elements);
-      });
-      elements.form.addEventListener("change", function () {
-        setMinDateTime(elements.time);
-        renderClientPreview(elements);
-        saveClientDraft(elements);
-      });
-      elements.form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        setMinDateTime(elements.time);
-        var data = readClientForm(elements);
-        var error = validateClientRequest(data);
-        if (error) return setStatus(elements.status, error, "error");
-        try {
-          var profile = getClientProfile();
-          if (!profile || profile.phoneNormalized !== normalizePhone(data.phone)) {
-            profile = await saveClientProfileFromFields(elements, data.clientName, data.phone);
-            setStatus(elements.profileStatus, "Профиль клиента автоматически сохранён по телефону из заявки.", "ok");
-          }
-          await apiFetch("/requests", {
-            method: "POST",
-            body: JSON.stringify(Object.assign({}, data, { preferredTime: toServerDateTime(data.preferredTime) }))
-          });
-          removeStoredJson(CLIENT_DRAFT_KEY);
-          clearClientForm(elements);
-          await renderClientRequests();
-          setStatus(elements.status, "Заявка отправлена в общую доску мастеров и сохранена в SQLite.", "ok");
-        } catch (err) {
-          setStatus(elements.status, err.message, "error");
-        }
-      });
-      if (elements.clear) {
-        elements.clear.addEventListener("click", function () {
-          clearClientForm(elements);
-          setStatus(elements.status, "Форма очищена.", "ok");
-        });
-      }
-      if (elements.refresh) {
-        elements.refresh.addEventListener("click", async function () {
-          await renderClientRequests();
-          setStatus(elements.status, "Список заявок обновлён.", "ok");
-        });
-      }
-    }
-  }
-
-  async function renderMasterRequests() {
-    var openContainer = document.getElementById("master-open-list");
-    var mineContainer = document.getElementById("master-my-list");
-    if (!openContainer && !mineContainer) return;
-    var profile = getMasterProfile();
-    if (!profile) return;
-    try {
-      var openRequests = await apiFetch("/requests/open");
-      var myRequests = await apiFetch("/requests/master?masterId=" + encodeURIComponent(profile.id));
-      if (openContainer) {
-        if (!openRequests.length) renderEmpty(openContainer, "Свободных заявок нет. Если другой мастер уже взял заявку, она исчезает из общей доски.");
-        else {
-          openContainer.replaceChildren();
-          openRequests.forEach(function (request) { openContainer.appendChild(createRequestCard(request, "master-open")); });
-        }
-      }
-      if (mineContainer) {
-        if (!myRequests.length) renderEmpty(mineContainer, "У вас пока нет заявок в работе. Возьмите свободную заявку из общей доски.");
-        else {
-          mineContainer.replaceChildren();
-          myRequests.forEach(function (request) { mineContainer.appendChild(createRequestCard(request, "master-mine")); });
-        }
-      }
-    } catch (error) {
-      renderEmpty(openContainer, "Не удалось загрузить заявки: " + error.message);
-      renderEmpty(mineContainer, "Не удалось загрузить заявки: " + error.message);
-    }
-  }
-
-  async function acceptMasterRequest(id) {
-    var profile = getMasterProfile();
-    var statusEl = document.getElementById("master-status");
-    if (!profile) return setStatus(statusEl, "Сначала войдите как мастер.", "error");
-    try {
-      await apiFetch("/requests/" + encodeURIComponent(id) + "/accept", {
-        method: "POST",
-        body: JSON.stringify({ masterId: profile.id, masterName: profile.name || "Мастер" })
-      });
-      await renderMasterRequests();
-      setStatus(statusEl, "Заявка взята в работу и исчезла из общей доски.", "ok");
-    } catch (error) {
-      setStatus(statusEl, error.message, "error");
-      await renderMasterRequests();
-    }
-  }
-
-  async function sendMasterMessage(id, text) {
-    var profile = getMasterProfile();
-    var statusEl = document.getElementById("master-status");
-    if (!profile) return setStatus(statusEl, "Сначала войдите как мастер.", "error");
-    if (!text) return setStatus(statusEl, "Введите сообщение клиенту.", "error");
-    try {
-      await apiFetch("/requests/" + encodeURIComponent(id) + "/messages", {
-        method: "POST",
-        body: JSON.stringify({
-          senderRole: "master",
-          author: profile.name || "Мастер",
-          masterId: profile.id,
-          text: text
-        })
-      });
-      await renderMasterRequests();
-      setStatus(statusEl, "Сообщение отправлено клиенту.", "ok");
-    } catch (error) {
-      setStatus(statusEl, error.message, "error");
-      await renderMasterRequests();
-    }
-  }
-
-  async function markRequestDone(id) {
-    var profile = getMasterProfile();
-    var statusEl = document.getElementById("master-status");
-    if (!profile) return setStatus(statusEl, "Сначала войдите как мастер.", "error");
-    try {
-      await apiFetch("/requests/" + encodeURIComponent(id) + "/done", {
-        method: "POST",
-        body: JSON.stringify({ masterId: profile.id })
-      });
-      await renderMasterRequests();
-      setStatus(statusEl, "Заявка отмечена готовой.", "ok");
-    } catch (error) {
-      setStatus(statusEl, error.message, "error");
-      await renderMasterRequests();
-    }
-  }
-
-  async function refreshMasterAuthUI() {
-    var authCard = document.getElementById("master-auth-card");
-    var workspace = document.getElementById("master-workspace");
-    var currentProfile = document.getElementById("master-current-profile");
-    var loginNameEl = document.getElementById("master-login-name");
-    var profile = getMasterProfile();
-    if (!authCard && !workspace) return;
-    if (profile) {
-      if (authCard) authCard.hidden = true;
-      if (workspace) workspace.hidden = false;
-      safeSetText(currentProfile, "Мастер: " + (profile.name || "Мастер"));
-      await renderMasterRequests();
-    } else {
-      if (authCard) authCard.hidden = false;
-      if (workspace) workspace.hidden = true;
-      if (loginNameEl && !loginNameEl.value) loginNameEl.value = "Алексей";
-    }
-  }
-
-  async function wireMasterProfile() {
-    var loginForm = document.getElementById("master-login-form");
-    var loginStatusEl = document.getElementById("master-login-status");
-    var logoutButton = document.getElementById("master-logout");
-    if (!loginForm && !document.getElementById("master-workspace")) return;
-    await refreshMasterAuthUI();
-
-    if (loginForm) {
-      loginForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        var nameEl = document.getElementById("master-login-name");
-        var codeEl = document.getElementById("master-login-code");
-        var name = nameEl && nameEl.value.trim() ? nameEl.value.trim() : "Мастер";
-        var code = codeEl ? codeEl.value.trim() : "";
-        try {
-          var profile = await apiFetch("/master/login", {
-            method: "POST",
-            body: JSON.stringify({ name: name, code: code })
-          });
-          saveMasterProfile(profile);
-          if (codeEl) codeEl.value = "";
-          setStatus(loginStatusEl, "", "ok");
-          await refreshMasterAuthUI();
-        } catch (error) {
-          setStatus(loginStatusEl, error.message, "error");
-        }
-      });
-    }
-
-    if (logoutButton) {
-      logoutButton.addEventListener("click", async function () {
-        clearMasterProfile();
-        await refreshMasterAuthUI();
-      });
-    }
-
-    var workspace = document.getElementById("master-workspace");
-    if (workspace) {
-      workspace.addEventListener("click", async function (event) {
-        var target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        var action = target.dataset.requestAction;
-        var id = target.dataset.requestId;
-        if (!action || !id) return;
-        if (action === "accept") return acceptMasterRequest(id);
-        if (action === "master-reply") {
-          var card = target.closest(".request-card");
-          var textarea = card ? card.querySelector('textarea[data-reply-text="master"]') : null;
-          var text = textarea ? textarea.value.trim() : "";
-          await sendMasterMessage(id, text);
-          if (textarea && text) textarea.value = "";
-          return;
-        }
-        if (action === "done") return markRequestDone(id);
-      });
-    }
-  }
-
-  function wireEstimateForm() {
-    var form = document.getElementById("estimate-form");
-    if (!form) return;
-    var device = document.getElementById("device-type");
-    var service = document.getElementById("service-type");
-    var brand = document.getElementById("brand-type");
-    var result = document.getElementById("estimate-result");
-    var note = document.getElementById("estimate-note");
-    function calculate() {
-      var deviceValue = device ? device.value : "phone";
-      var serviceValue = service ? service.value : "display";
-      var brandValue = brand ? brand.value : "standard";
-      var base = BASE_PRICES[deviceValue] && BASE_PRICES[deviceValue][serviceValue] ? BASE_PRICES[deviceValue][serviceValue] : 990;
-      var multiplier = BRAND_MULTIPLIERS[brandValue] || 1;
-      var total = base * multiplier;
-      safeSetText(result, formatPrice(total));
-      safeSetText(note, "Точная сумма зависит от модели, детали и состояния устройства.");
-    }
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
-      calculate();
-    });
-    [device, service, brand].forEach(function (element) {
-      if (element) element.addEventListener("change", calculate);
-    });
-    calculate();
-  }
-
-  document.addEventListener("DOMContentLoaded", async function () {
-    loadTheme();
-    wireThemeToggle();
-    applyRoleVisibility();
-    setNavCurrent();
-    wireEstimateForm();
-    await wireClientProfile();
-    await wireMasterProfile();
-  });
+  document.addEventListener("DOMContentLoaded", async function () { initTheme(); currentNav(); await loadOptions(); await initCalculator(); await initClient(); await initMaster(); });
 })();

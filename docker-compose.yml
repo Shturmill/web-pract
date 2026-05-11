@@ -1,8 +1,6 @@
 services:
   web-pract:
-    build:
-      context: .
-      network: host
+    build: .
     container_name: web-pract-servicebox
     ports:
       - "8080:8000"

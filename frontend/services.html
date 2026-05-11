@@ -1,147 +1,65 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Прайс и калькулятор примерной стоимости ремонта техники ServiceBox." />
-    <title>ServiceBox — цены на ремонт</title>
-    <link rel="stylesheet" href="css/styles.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="top-strip" aria-label="Краткая информация о сервисе">
-        <span>Ежедневно 10:00–21:00</span>
-        <span>Диагностика перед ремонтом</span>
-        <a href="tel:+79000000000">+7 900 000-00-00</a>
-      </div>
-      <div class="site-header__inner">
-        <a class="brand" href="index.html" aria-label="ServiceBox — главная страница">
-          <span class="brand__logo" aria-hidden="true">SB</span>
-          <span class="brand__text">ServiceBox</span>
-        </a>
-        <nav class="nav" aria-label="Основная навигация">
-          <a href="index.html">Главная</a>
-          <a href="services.html">Цены</a>
-          <a href="client.html">Клиент</a>
-          <a href="master.html" data-master-link>Мастер</a>
-          <a href="about.html">О проекте</a>
-        </nav>
-        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
-      </div>
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Калькулятор ServiceBox: выберите услугу и дату, чтобы увидеть стоимость ремонта." />
+  <title>ServiceBox — калькулятор</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html"><span class="brand__logo">SB</span><span>ServiceBox</span></a>
+      <nav class="nav" aria-label="Основная навигация">
+        <a href="index.html">Главная</a>
+        <a href="services.html">Калькулятор</a>
+        <a href="client.html">Клиент</a>
+        <a href="master.html" data-master-link>Мастер</a>
+        <a href="about.html">О проекте</a>
+      </nav>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">◐</button>
+    </div>
+  </header>
 
-    <main>
-      <section class="hero hero--compact">
-        <p class="eyebrow">Прайс-лист</p>
-        <h1>Выберите устройство и получите примерную стоимость</h1>
-        <p class="lead">
-          Выберите тип устройства, поломку и бренд — калькулятор покажет ориентировочную стоимость формата «от … ₽».
-        </p>
-      </section>
+  <main>
+    <section class="hero hero--compact">
+      <p class="eyebrow">Калькулятор</p>
+      <h1>Выберите услугу — календарь покажет цену</h1>
+      <p class="lead">Цена зависит от даты записи: сегодня и ближайшие дни дороже, плановая запись дешевле.</p>
+    </section>
 
-      <section class="section estimate-layout" aria-labelledby="estimate-title">
-        <article class="card estimate-card">
-          <h2 id="estimate-title">Калькулятор ремонта</h2>
-          <form class="estimate-form" id="estimate-form">
-            <label for="device-type">Тип устройства</label>
-            <select id="device-type" name="device-type">
-              <option value="phone">Смартфон</option>
-              <option value="tablet">Планшет</option>
-              <option value="laptop">Ноутбук</option>
-            </select>
+    <section class="section calculator-layout">
+      <article class="card">
+        <form id="calculator-form" class="form-stack" novalidate>
+          <label for="calc-service">Услуга</label>
+          <select id="calc-service" name="service" required>
+            <option value="">Выберите услугу</option>
+          </select>
+          <p class="field-hint">После выбора услуги ниже появится календарь цен.</p>
+        </form>
 
-            <label for="service-type">Поломка</label>
-            <select id="service-type" name="service-type">
-              <option value="display">Замена дисплея — от 2 490 ₽</option>
-              <option value="battery">Замена аккумулятора — от 890 ₽</option>
-              <option value="connector">Ремонт разъёма — от 1 190 ₽</option>
-              <option value="water">Восстановление после влаги — от 1 990 ₽</option>
-              <option value="software">Настройка / программный ремонт — от 790 ₽</option>
-              <option value="cleaning">Чистка / профилактика — от 990 ₽</option>
-            </select>
-
-            <label for="brand-type">Бренд</label>
-            <select id="brand-type" name="brand-type">
-              <option value="standard">Samsung / Xiaomi / Honor</option>
-              <option value="apple">Apple</option>
-            </select>
-
-            <button type="submit">Рассчитать</button>
-          </form>
-        </article>
-
-        <aside class="card result-card" aria-live="polite">
-          <p class="eyebrow">Предварительно</p>
-          <h2 id="estimate-result">от 2 490 ₽</h2>
-          <p id="estimate-note">Итоговая сумма зависит от модели, детали и состояния устройства.</p>
-          <a class="button button--wide" href="client.html">Оставить заявку</a>
-        </aside>
-      </section>
-
-      <section class="section" id="price">
-        <div class="section__head">
-          <p class="eyebrow">Базовые услуги</p>
-          <h2>Популярные работы</h2>
+        <div class="calendar-toolbar">
+          <strong>Ближайшие даты</strong>
+          <button type="button" class="button button--ghost" id="calendar-refresh">Обновить</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Услуга</th>
-                <th>Устройства</th>
-                <th>Время</th>
-                <th>Стоимость работы</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Диагностика</td>
-                <td>Смартфоны, планшеты, ноутбуки</td>
-                <td>15–60 минут</td>
-                <td>0 ₽ при ремонте</td>
-              </tr>
-              <tr>
-                <td>Замена дисплея</td>
-                <td>Смартфоны и планшеты</td>
-                <td>30–90 минут</td>
-                <td>от 2 490 ₽</td>
-              </tr>
-              <tr>
-                <td>Замена аккумулятора</td>
-                <td>Смартфоны и ноутбуки</td>
-                <td>30–60 минут</td>
-                <td>от 890 ₽</td>
-              </tr>
-              <tr>
-                <td>Ремонт разъёма зарядки</td>
-                <td>Смартфоны, планшеты</td>
-                <td>60 минут</td>
-                <td>от 1 190 ₽</td>
-              </tr>
-              <tr>
-                <td>Чистка охлаждения</td>
-                <td>Ноутбуки</td>
-                <td>45–90 минут</td>
-                <td>от 1 490 ₽</td>
-              </tr>
-              <tr>
-                <td>Установка системы и ПО</td>
-                <td>Ноутбуки и компьютеры</td>
-                <td>30–120 минут</td>
-                <td>от 990 ₽</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <div class="price-calendar" id="price-calendar" aria-live="polite"></div>
+      </article>
 
+      <aside class="card result-card">
+        <p class="eyebrow">Выбранная запись</p>
+        <h2 id="calc-result-price">—</h2>
+        <dl class="preview-list">
+          <div><dt>Услуга</dt><dd id="calc-result-service">—</dd></div>
+          <div><dt>Дата</dt><dd id="calc-result-date">—</dd></div>
+          <div><dt>Почему такая цена</dt><dd id="calc-result-reason">—</dd></div>
+        </dl>
+        <a class="button button--wide" href="client.html">Оставить заявку</a>
+      </aside>
+    </section>
+  </main>
 
-    </main>
-
-    <footer class="site-footer">
-      <span>ServiceBox · учебный проект</span>
-      <span>HTML5 · CSS3 · Vanilla JavaScript</span>
-    </footer>
-    <script src="js/app.js" defer></script>
-  </body>
+  <footer class="site-footer">ServiceBox · калькулятор по дате</footer>
+  <script src="js/app.js" defer></script>
+</body>
 </html>

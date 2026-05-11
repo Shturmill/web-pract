@@ -1,13 +1,6 @@
-.git
-__pycache__
+__pycache__/
 *.pyc
-*.pyo
-*.pyd
-.Python
+*.sqlite
+*.sqlite-*
+.venv/
 .env
-.venv
-venv
-node_modules
-.DS_Store
-data/*.sqlite
-data/*.sqlite-*
