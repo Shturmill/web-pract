@@ -1,0 +1,70 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+.venv/
+venv/
+env/
+ENV/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# SQLite / data
+data/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+logs/
+
+# Rust / Yew / Trunk
+target/
+dist/
+frontend-yew/target/
+frontend-yew/dist/
+Cargo.lock
+
+# Build artifacts
+build/
+out/
+.cache/
+
+# Docker local files
+docker-compose.override.yml
+
+# Archives
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+
+# Temporary files
+tmp/
+temp/
+*.tmp
