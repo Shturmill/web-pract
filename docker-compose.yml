@@ -6,7 +6,7 @@ services:
       - "8080:8000"
     environment:
       DATABASE_PATH: /app/data/servicebox.sqlite
-      MASTER_ACCESS_CODE: "1234"
+      MASTER_ACCESS_CODE: ${MASTER_ACCESS_CODE:?Set MASTER_ACCESS_CODE in a .env file (see .env.example)}
     volumes:
       - servicebox-data:/app/data
     network_mode: bridge

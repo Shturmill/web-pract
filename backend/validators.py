@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Any
-
-from pydantic import field_validator
 
 PHONE_PATTERN = re.compile(r"^\+7[\s\-]?\(?[0-9]{3}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$")
 NAME_PATTERN = re.compile(r"^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё\s\-]{1,79}$")
@@ -80,9 +77,6 @@ def validate_not_past(value: str | None) -> str | None:
         raise ValueError("Дата и время заявки не могут быть раньше текущего момента.")
     return value
 
-
-def strip_string(value: Any) -> Any:
-    return compact_spaces(value) if isinstance(value, str) else value
 
 MASTER_ID_PATTERN = re.compile(r"^master:[a-zа-яё0-9-]{1,110}$", re.IGNORECASE)
 CODE_PATTERN = re.compile(r"^[A-Za-z0-9_-]{4,20}$")

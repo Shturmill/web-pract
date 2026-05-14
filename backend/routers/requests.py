@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, HTTPException, Query, status
 
 from ..constants import REPAIR_OPTIONS
@@ -13,33 +11,25 @@ from ..validators import normalize_phone
 router = APIRouter(prefix="/api/requests", tags=["requests"])
 
 
-def make_request_id() -> int:
-    return int(datetime.now().timestamp() * 1000)
-
-
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_request(payload: RequestCreateIn) -> dict:
     repair = REPAIR_OPTIONS[payload.repairId]
     phone_normalized = normalize_phone(payload.phone)
     now = utc_now_iso()
-    request_id = make_request_id()
     problem = payload.comment or str(repair["title"])
 
     with get_db() as conn:
         conn.execute("BEGIN IMMEDIATE")
         upsert_client(conn, payload.clientName, payload.phone)
-        while conn.execute("SELECT 1 FROM requests WHERE id = ?", (request_id,)).fetchone():
-            request_id += 1
-        conn.execute(
+        cursor = conn.execute(
             """
             INSERT INTO requests (
-                id, client_name, phone, owner_phone, owner_name, device, repair_id, repair_title,
+                client_name, phone, owner_phone, owner_name, device, repair_id, repair_title,
                 price_from, price_text, repair_duration, preferred_time, comment, problem,
                 status, assignee, assignee_name, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', NULL, '', ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', NULL, '', ?, ?)
             """,
             (
-                request_id,
                 payload.clientName,
                 payload.phone,
                 phone_normalized,
@@ -57,6 +47,7 @@ def create_request(payload: RequestCreateIn) -> dict:
                 now,
             ),
         )
+        request_id = cursor.lastrowid
         conn.commit()
         row = get_request_or_404(conn, request_id)
         return row_to_request(row, conn)

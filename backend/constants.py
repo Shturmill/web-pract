@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-MASTER_ACCESS_CODE = "1234"
-
 REPAIR_OPTIONS: dict[str, dict[str, object]] = {
     "diagnostic": {"title": "Диагностика устройства", "price_from": 0, "duration": "15–60 минут"},
     "display": {"title": "Замена дисплея / экрана", "price_from": 2490, "duration": "30–90 минут"},

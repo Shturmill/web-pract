@@ -44,7 +44,7 @@ def init_db() -> None:
             );
 
             CREATE TABLE IF NOT EXISTS requests (
-                id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 client_name TEXT NOT NULL,
                 phone TEXT NOT NULL,
                 owner_phone TEXT NOT NULL,

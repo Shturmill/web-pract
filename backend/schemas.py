@@ -121,7 +121,7 @@ class AcceptRequestIn(BaseModel):
     @field_validator("masterId")
     @classmethod
     def master_id_is_valid(cls, value: str) -> str:
-        return validate_master_id(value) or value
+        return validate_master_id(value)
 
 
 class MessageCreateIn(BaseModel):
@@ -160,4 +160,4 @@ class DoneRequestIn(BaseModel):
     @field_validator("masterId")
     @classmethod
     def master_id_is_valid(cls, value: str) -> str:
-        return validate_master_id(value) or value
+        return validate_master_id(value)

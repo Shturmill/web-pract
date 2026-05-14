@@ -67,7 +67,7 @@
     document.querySelectorAll("select").forEach(function (select) {
       if (!select.id || ["calc-service", "client-repair-type"].indexOf(select.id) === -1) return;
       var value = select.value; select.replaceChildren();
-      var ph = document.createElement("option"); ph.value = ""; ph.textContent = select.id === "calc-service" ? "Выберите услугу" : "Выберите услугу"; select.appendChild(ph);
+      var ph = document.createElement("option"); ph.value = ""; ph.textContent = "Выберите услугу"; select.appendChild(ph);
       REPAIR_OPTIONS.forEach(function (opt) { var o = document.createElement("option"); o.value = opt.id; o.textContent = opt.title + " — от " + Number(opt.priceFrom).toLocaleString("ru-RU") + " ₽"; select.appendChild(o); });
       if (value) select.value = value;
     });
@@ -107,7 +107,16 @@
   async function renderClientRequests() { var list = $("client-request-list"); if (!list) return; var p = clientProfile(); if (!p) return empty(list, "Сначала сохраните профиль клиента."); try { var data = await api("/requests/client?phone=" + encodeURIComponent(p.phone)); if (!data.length) return empty(list, "Заявок пока нет."); list.replaceChildren(); data.forEach(function (r) { list.appendChild(card(r, "client")); }); } catch (e) { empty(list, e.message); } }
   async function initClient() {
     if (!$("client-profile-form")) return;
-    setMinDate($("client-time")); fillClientProfile(); renderClientRequests(); var draft = storageGet(CLIENT_DRAFT_KEY); if (draft) { Object.keys(draft).forEach(function (k) {}); }
+    setMinDate($("client-time")); fillClientProfile(); renderClientRequests();
+    var draft = storageGet(CLIENT_DRAFT_KEY);
+    if (draft) {
+      if (draft.clientName && $("client-name")) $("client-name").value = draft.clientName;
+      if (draft.phone && $("client-phone")) $("client-phone").value = draft.phone;
+      if (draft.device && $("client-device")) $("client-device").value = draft.device;
+      if (draft.repairId && $("client-repair-type")) $("client-repair-type").value = draft.repairId;
+      if (draft.preferredTime && $("client-time")) $("client-time").value = draft.preferredTime;
+      if (draft.comment && $("client-comment")) $("client-comment").value = draft.comment;
+    }
     $("client-profile-form").addEventListener("submit", async function (ev) { ev.preventDefault(); var name = clean($("profile-client-name").value); var phone = clean($("profile-client-phone").value); if (!validName(name)) return status($("client-profile-status"), "Некорректное имя.", "error"); if (!validPhone(phone)) return status($("client-profile-status"), "Телефон в формате +7 900 000-00-00.", "error"); try { await saveClientProfile(name, phone); fillClientProfile(); renderClientRequests(); status($("client-profile-status"), "Профиль сохранён.", "ok"); } catch (e) { status($("client-profile-status"), e.message, "error"); } });
     $("client-profile-reset").addEventListener("click", function () { storageRemove(CLIENT_PROFILE_KEY); fillClientProfile(); renderClientRequests(); status($("client-profile-status"), "Профиль очищен.", "ok"); });
     $("client-request-form").addEventListener("input", function () { storageSet(CLIENT_DRAFT_KEY, readClientForm()); });
